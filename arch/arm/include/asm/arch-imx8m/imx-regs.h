@@ -531,6 +531,7 @@ struct pwm_regs {
 };
 
 #define WDOG_WDT_MASK	BIT(3)
+#define WDOG_WDW_MASK	BIT(7)
 #define WDOG_WDZST_MASK	BIT(0)
 struct wdog_regs {
 	u16	wcr;	/* Control */

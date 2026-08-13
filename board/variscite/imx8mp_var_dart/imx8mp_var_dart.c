@@ -165,7 +165,26 @@ int board_early_init_f(void)
 
 	imx_iomux_v3_setup_multiple_pads(wdog_pads, ARRAY_SIZE(wdog_pads));
 
-	set_wdog_reset(wdog);
+	/*
+	 * Deliberately not set_wdog_reset(). WCR's WDT, WDZST and WDW bits are
+	 * all write-once, and whichever write lands first locks every one of
+	 * them - so they have to be set together, here, in the single write we
+	 * get. set_wdog_reset() writes WDT|WDZST only, which locks WDW clear
+	 * for good.
+	 *
+	 * WDW matters because it is the bit that freezes the watchdog counter
+	 * in WAIT mode, and WAIT is where suspend-to-idle leaves the SoC. With
+	 * it clear the counter keeps running while the unit is asleep, and
+	 * since the watchdog cannot be disabled (WDE is write-once too) and its
+	 * timeout tops out at 128 s, any sleep longer than that ends in a
+	 * WDOG_B reset - measured on the EVB as a "Reset cause: POR" roughly
+	 * 129 s in (TWIKOG2-3237).
+	 *
+	 * WDT and WDZST keep their original meaning: drive WDOG_B out to reset
+	 * the PMIC on timeout, and freeze the counter in STOP mode.
+	 */
+	setbits_le16(&wdog->wcr,
+		     WDOG_WDT_MASK | WDOG_WDZST_MASK | WDOG_WDW_MASK);
 
 	return 0;
 }
