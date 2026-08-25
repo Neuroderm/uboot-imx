@@ -477,6 +477,23 @@ int board_late_init(void)
 	var_setup_mac(ep);
 	var_eeprom_print_prod_info(ep);
 
+	/*
+	 * Publish what WCR.WDW actually ended up as, rather than what
+	 * board_early_init_f() asked for. The bit is write-once and the first
+	 * stage to write WCR wins, so a unit running an older SPL under a
+	 * current U-Boot has it clear whatever this build intended. The
+	 * register is the only honest source, so read it here and let Android
+	 * decide whether suspend-to-idle is safe to use: with WDW clear the
+	 * watchdog keeps counting in WAIT and resets the board 128 s into a
+	 * sleep (TWIKOG2-3237, TWIKOG2-3448).
+	 */
+	{
+		struct wdog_regs *wdog = (struct wdog_regs *)WDOG1_BASE_ADDR;
+
+		env_set("wdog_wdw",
+			(readw(&wdog->wcr) & WDOG_WDW_MASK) ? "1" : "0");
+	}
+
 	return 0;
 }
 

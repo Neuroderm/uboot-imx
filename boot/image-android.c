@@ -182,6 +182,22 @@ static int append_androidboot_args(char *args, uint32_t *len, void *fdt_addr)
 		strncat(args, args_buf, *len - strlen(args));
 	}
 
+	/*
+	 * Whether the watchdog counter is frozen in WAIT mode, read out of
+	 * WCR.WDW by the board code. Android needs this to decide whether
+	 * suspend-to-idle can be used at all: with the bit clear the watchdog
+	 * keeps counting while the SoC sleeps and resets the board part way
+	 * into any sleep. Only boards that set the environment variable get
+	 * the argument.
+	 */
+	char *wdog_wdw = env_get("wdog_wdw");
+	if (wdog_wdw) {
+		sprintf(args_buf,
+			" androidboot.wdog_wdw=%s",
+			wdog_wdw);
+		strncat(args, args_buf, *len - strlen(args));
+	}
+
 	if (!fdt_addr) {
 		sprintf(args_buf,
 			" androidboot.boot_device_root=mmcblk%d", mmc_map_to_kernel_blk(mmc_get_env_dev()));
